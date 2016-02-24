@@ -1,0 +1,269 @@
+
+/gate/geometry/setMaterialDatabase	/home/raid4/kuang/scatter/myGateMaterials.db
+
+
+#=====================================================
+# VISUALISATION
+#=====================================================
+
+
+
+
+/vis/open DAWNFILE
+/vis/viewer/set/viewpointThetaPhi   60 45
+/vis/viewer/zoom                  2
+/vis/drawVolume
+/vis/viewer/set/hiddenEdge 1
+#/vis/viewer/set/autoRefresh 0
+#/tracking/storeTrajectory           1
+#/vis/scene/add/trajectories 
+#/vis/scene/endOfEventAction         accumulate
+
+#/vis/disable
+#=====================================================
+# GEOMETRY
+#=====================================================
+/gate/output/verbose 2
+/gate/world/geometry/setXLength 60.0 cm
+/gate/world/geometry/setYLength 60.0 cm
+/gate/world/geometry/setZLength 60.0 cm
+/gate/world/vis/setVisible 0
+/gate/world/daughters/name ecat
+/gate/world/daughters/insert cylinder
+/gate/ecat/setMaterial Air
+/gate/ecat/geometry/setRmax 218.25 mm
+/gate/ecat/geometry/setRmin 0.0 mm
+/gate/ecat/geometry/setHeight 60.0 cm
+/gate/ecat/vis/setVisible 0
+/gate/ecat/vis/forceWireframe
+#/vis/viewer/zoom 1
+
+
+# 1st level
+/gate/ecat/daughters/name detBlock
+/gate/ecat/daughters/insert box
+/gate/detBlock/placement/setTranslation 198.25 0.0 0.0 mm
+/gate/detBlock/geometry/setXLength 20.0 mm
+/gate/detBlock/geometry/setYLength 30 mm
+/gate/detBlock/geometry/setZLength 30 mm
+/gate/detBlock/setMaterial Water
+/gate/detBlock/vis/forceSolid
+/gate/detBlock/vis/setColor grey
+
+# 2nd level, front layer crystal
+/gate/detBlock/daughters/name frontCrystal
+/gate/detBlock/daughters/insert box
+/gate/frontCrystal/geometry/setXLength 20.0 mm
+/gate/frontCrystal/geometry/setYLength 2.45 mm
+/gate/frontCrystal/geometry/setZLength 2.45 mm
+/gate/frontCrystal/placement/setTranslation 0.0 0.0 0.0 mm
+
+# /gate/frontCrystal/setMaterial LYSOCustom
+/gate/frontCrystal/setMaterial LSO
+/gate/frontCrystal/vis/setVisible 0
+/gate/frontCrystal/vis/setColor yellow
+/gate/frontCrystal/vis/forceWireframe
+
+# repeat the front crystal
+/gate/frontCrystal/repeaters/insert cubicArray
+/gate/frontCrystal/cubicArray/setRepeatNumberX 1
+/gate/frontCrystal/cubicArray/setRepeatNumberY 12
+/gate/frontCrystal/cubicArray/setRepeatNumberZ 12
+/gate/frontCrystal/cubicArray/setRepeatVector 0.0 2.5 2.5 mm
+
+
+
+# now, repeat the block
+/gate/detBlock/repeaters/insert ring
+/gate/detBlock/ring/setRepeatNumber 32
+#/gate/detBlock/repeaters/insert                       genericRepeater
+#/gate/detBlock/genericRepeater/setPlacementsFilename myvolume_cylinder.placements
+#/gate/detBlock/genericRepeater/useRelativeTranslation 0
+
+/gate/detBlock/repeaters/insert linear
+/gate/detBlock/linear/setRepeatNumber 6
+/gate/detBlock/linear/setRepeatVector 0.0 0.0 32.5 mm
+
+
+#=========================================================
+# now, attach the volumes we've defined to the system
+#=========================================================
+/gate/systems/ecat/block/attach detBlock
+/gate/systems/ecat/crystal/attach frontCrystal
+
+
+# and associate sensitive detectors with the crystals
+/gate/frontCrystal/attachCrystalSD
+
+
+#=====================================================
+#   Phantom
+#====================================================
+
+/control/execute phantom.mac
+
+
+#=====================================================
+# PHYSICS
+#=====================================================
+
+/gate/physics/addProcess PhotoElectric
+/gate/physics/processes/PhotoElectric/setModel StandardModel
+
+/gate/physics/addProcess Compton
+/gate/physics/processes/Compton/setModel StandardModel
+
+/gate/physics/addProcess RayleighScattering
+/gate/physics/processes/RayleighScattering/setModel PenelopeModel
+
+/gate/physics/addProcess ElectronIonisation
+/gate/physics/processes/ElectronIonisation/setModel StandardModel e-
+/gate/physics/processes/ElectronIonisation/setModel StandardModel e+
+
+/gate/physics/addProcess Bremsstrahlung
+/gate/physics/processes/Bremsstrahlung/setModel StandardModel e-
+/gate/physics/processes/Bremsstrahlung/setModel StandardModel e+
+
+/gate/physics/addProcess PositronAnnihilation
+
+/gate/physics/addProcess eMultipleScattering
+/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e- distanceToBoundary
+/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e+ distanceToBoundary
+
+/gate/physics/processList Enabled
+/gate/physics/processList Initialized
+
+#=====================================================
+# CUTS
+#=====================================================
+
+/gate/physics/Gamma/SetCutInRegion      frontCrystal 1.0 cm
+/gate/physics/Electron/SetCutInRegion   frontCrystal 1.0 cm
+/gate/physics/Positron/SetCutInRegion   frontCrystal 1.0 cm
+
+
+
+
+
+#/gate/physics/Gamma/SetCutInRegion      phantom 0.1 mm
+#/gate/physics/Electron/SetCutInRegion   phantom 0.1 mm
+#/gate/physics/Positron/SetCutInRegion   phantom 0.1 mm
+
+#/gate/physics/SetMaxStepSizeInRegion    phantom 0.01 mm
+
+
+#======================================
+# INITIALIZE
+#======================================
+/gate/run/initialize
+
+#-------------------oooooOOOOO00000OOOOOooooo---------------------#
+#                                                                 #
+#  D E F I N I T I O N   O F   Y O U R   A C Q U I S I T I O N    #
+#  D I G I T I Z E R   &   C O I N C I D E N C E   S H O R T E R  #
+#                                                                 #
+#-------------------oooooOOOOO00000OOOOOooooo---------------------#
+
+#	A D D E R
+/gate/digitizer/Singles/insert adder
+
+
+#       R E A D O U T 
+/gate/digitizer/Singles/insert readout
+/gate/digitizer/Singles/readout/setDepth 1
+
+
+#      E N E R G Y   B L U R R I N G
+/gate/digitizer/Singles/insert blurring
+/gate/digitizer/Singles/blurring/setResolution 0.171
+/gate/digitizer/Singles/blurring/setEnergyOfReference 511. keV
+
+
+#       E N E R G Y   C U T
+/gate/digitizer/Singles/insert thresholder
+/gate/digitizer/Singles/thresholder/setThreshold 420. keV
+/gate/digitizer/Singles/insert upholder
+/gate/digitizer/Singles/upholder/setUphold 600. keV
+
+
+#       D E A D    T I M E 
+#/gate/digitizer/Singles/insert deadtime
+#/gate/digitizer/Singles/insert timeResolution
+#/gate/digitizer/Singles/timeResolution/setTimeResolution 1 ns
+#/gate/digitizer/Singles/deadtime/setDeadTime 100000 ps
+#/gate/digitizer/Singles/deadtime/setMode paralysable
+#/gate/digitizer/Singles/deadtime/chooseDTVolume detBlock
+
+
+#	C O I N C I    S O R T E R 
+
+
+/gate/digitizer/Coincidences/setWindow          10. ns
+/gate/digitizer/Coincidences/setOffset 0.0 ns
+/gate/digitizer/Coincidences/minSectorDifference 1
+/gate/digitizer/Coincidences/describe
+
+
+#/gate/digitizer/name delay
+#/gate/digitizer/insert coincidenceSorter
+#/gate/digitizer/delay/setWindow 10. ns
+#/gate/digitizer/delay/setOffset 500. ns
+#/gate/digitizer/delay/describe
+
+
+#/gate/digitizer/name finalCoinc
+#/gate/digitizer/insert coincidenceChain
+#/gate/digitizer/finalCoinc/addInputName delay
+#/gate/digitizer/finalCoinc/addInputName Coincidences
+#/gate/digitizer/finalCoinc/usePriority true
+#/gate/digitizer/finalCoinc/describe
+
+
+
+
+#=====================================================
+#  P A R T I C L E   S O U R C E
+#=====================================================
+
+
+/control/execute VoxelizedSource.mac
+
+
+#=====================================================
+#  D A T A   O U T P U T   
+#=====================================================
+
+/gate/output/root/enable
+/gate/output/root/setFileName             myname
+/gate/output/root/setRootHitFlag          0
+/gate/output/root/setRootSinglesFlag      1
+/gate/output/root/setRootCoincidencesFlag 0
+#/gate/output/root/setRootSinglesAdderFlag 1
+#/gate/output/root/setRootSinglesReadoutFlag 1
+
+#====================================================
+#  R A N D O M   E N G I N E  A N D  S E E D
+#====================================================
+# JamesRandom Ranlux64 MersenneTwister
+/gate/random/setEngineName JamesRandom
+/gate/random/setEngineSeed auto
+
+#/gate/random/verbose 1
+
+#=====================================================
+#   M E A S U R E M E N T   S E T T I N G S   
+#=====================================================
+
+/gate/application/setTimeSlice   1 s
+/gate/application/setTimeStart   0   s
+/gate/application/setTimeStop    1 s
+
+/gate/application/startDAQ
+
+
+
+
+
+
+
+
